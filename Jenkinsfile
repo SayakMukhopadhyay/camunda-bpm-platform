@@ -39,6 +39,8 @@ spec:
   """
 }
 
+def failedStageTypes = []
+
 pipeline {
   agent none
   options {
@@ -112,9 +114,19 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/centos:v0.4.6', 16)
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'engine/', ' test -Pdatabase,h2')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'engine/', ' test -Pdatabase,h2')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
+            }
+            failure {
+              addFailedStageType(failedStageTypes, 'engine-unit')
             }
           }
         }
@@ -135,9 +147,19 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/centos:v0.4.6', 16)
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'engine/', 'test -Pdatabase,h2,cfgAuthorizationCheckRevokesAlways')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'engine/', 'test -Pdatabase,h2,cfgAuthorizationCheckRevokesAlways')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
+            }
+            failure {
+              addFailedStageType(failedStageTypes, 'engine-unit-authorizations')
             }
           }
         }
@@ -158,9 +180,16 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'engine-rest/engine-rest/', 'clean install -Pjersey2')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'engine-rest/engine-rest/', 'clean install -Pjersey2')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -181,9 +210,16 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'engine-rest/engine-rest/', 'clean install -Presteasy3')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'engine-rest/engine-rest/', 'clean install -Presteasy3')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -204,9 +240,19 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'webapps/', 'clean test -Pdatabase,h2 -Dskip.frontend.build=true')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'webapps/', 'clean test -Pdatabase,h2 -Dskip.frontend.build=true')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
+            }
+            failure {
+              addFailedStageType(failedStageTypes, 'webapps-unit')
             }
           }
         }
@@ -227,9 +273,9 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
                 runMaven(true, true, false, 'qa/', 'clean install -Ptomcat,h2,engine-integration')
               }
             }
@@ -237,6 +283,9 @@ pipeline {
           post {
             always {
               junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
+            }
+            failure {
+              addFailedStageType(failedStageTypes, 'engine-IT')
             }
           }
         }
@@ -257,9 +306,9 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/chrome:78v0.1.2')
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
                 runMaven(true, true, false, 'qa/', 'clean install -Ptomcat,h2,webapps-integration')
               }
             }
@@ -267,6 +316,9 @@ pipeline {
           post {
             always {
               junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
+            }
+            failure {
+              addFailedStageType(failedStageTypes, 'webapp-IT')
             }
           }
         }
@@ -287,11 +339,16 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/chrome:78v0.1.2')
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
                 runMaven(true, true, false, 'qa/', 'clean install -Pwildfly-vanilla,webapps-integration-sa')
               }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -312,9 +369,9 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/chrome:78v0.1.2', 16)
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
                 runMaven(true, true, true, 'distro/run/', 'clean install -Pintegration-test-camunda-run')
               }
             }
@@ -342,9 +399,9 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/chrome:78v0.1.2', 16)
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
                 runMaven(true, true, true, 'spring-boot-starter/', 'clean install -Pintegration-test-spring-boot-starter')
               }
             }
@@ -372,6 +429,9 @@ pipeline {
         when {
           anyOf {
             branch 'pipeline-master';
+            expression {
+              skipStageType(failedStageTypes, env.PROFILE)
+            }
             allOf {
               changeRequest();
 //              expression {
@@ -389,8 +449,10 @@ pipeline {
           stage('UNIT test') {
             steps {
               echo("UNIT DB Test Stage: ${env.PROFILE}-${env.DB}")
-              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-                runMaven(true, false, false, getMavenProfileDir(env.PROFILE), getMavenProfileCmd(env.PROFILE) + getDbProfiles(env.DB) + " " + getDbExtras(env.DB), true)
+              catchError(stageResult: 'FAILURE') {
+                withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                  runMaven(true, false, false, getMavenProfileDir(env.PROFILE), getMavenProfileCmd(env.PROFILE) + getDbProfiles(env.DB) + " " + getDbExtras(env.DB), true)
+                }
               }
             }
             post {
@@ -410,9 +472,16 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/centos:v0.4.6', 16)
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'engine/', 'clean verify -Pcheck-api-compatibility')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'engine/', 'clean verify -Pcheck-api-compatibility')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -422,9 +491,16 @@ pipeline {
               yaml getAgent('gcr.io/ci-30-162810/centos:v0.4.6', 16)
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'engine/', 'clean test -Pcheck-plugins')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'engine/', 'clean test -Pcheck-plugins')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -434,9 +510,24 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, 'engine/', 'clean test -Pdb-table-prefix')
+          when {
+            anyOf {
+              branch 'pipeline-master';
+              expression {
+                skipStageType(failedStageTypes, 'engine-unit')
+              }
+            }
+          }
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, 'engine/', 'clean test -Pdb-table-prefix')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -446,11 +537,26 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              nodejs('nodejs-14.6.0'){
-                runMaven(true, false, false, 'webapps/', 'clean test -Pdb-table-prefix')
+          when {
+            anyOf {
+              branch 'pipeline-master';
+              expression {
+                skipStageType(failedStageTypes, 'webapps-unit')
               }
+            }
+          }
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                nodejs('nodejs-14.6.0') {
+                  runMaven(true, false, false, 'webapps/', 'clean test -Pdb-table-prefix')
+                }
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -460,9 +566,16 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, false, false, '.', 'clean verify -Pcheck-engine,wls-compatibility,jersey')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, false, false, '.', 'clean verify -Pcheck-engine,wls-compatibility,jersey')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -472,9 +585,16 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, true, false, 'qa/', 'clean install -Pwildfly-domain,h2,engine-integration')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, true, false, 'qa/', 'clean install -Pwildfly-domain,h2,engine-integration')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -484,9 +604,16 @@ pipeline {
               yaml getAgent()
             }
           }
-          steps{
-            withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
-              runMaven(true, true, true, 'qa/', 'clean install -Pwildfly,wildfly-servlet,h2,engine-integration')
+          steps {
+            catchError(stageResult: 'FAILURE') {
+              withMaven(jdk: 'jdk-8-latest', maven: 'maven-3.2-latest', mavenSettingsConfig: 'camunda-maven-settings', options: [artifactsPublisher(disabled: true), junitPublisher(disabled: true)]) {
+                runMaven(true, true, true, 'qa/', 'clean install -Pwildfly,wildfly-servlet,h2,engine-integration')
+              }
+            }
+          }
+          post {
+            always {
+              junit testResults: '**/target/*-reports/TEST-*.xml', keepLongStdio: true
             }
           }
         }
@@ -525,7 +652,7 @@ void runMaven(boolean runtimeStash, boolean archivesStash, boolean qaStash, Stri
 
 void withLabels(String... labels) {
   for ( l in labels) {
-    pullRequest.labels.contains(labelName)
+    pullRequest.labels.contains(l)
   }
 }
 
@@ -636,4 +763,12 @@ String getMavenProfileCmd(String profile) {
 
 String getMavenProfileDir(String profile) {
   return resolveMavenProfileInfo(profile).directory
+}
+
+void addFailedStageType(List failedStageTypesList, String stageType) {
+  if (!failedStageTypesList.contains(stageType)) failedStageTypesList << 'firstStage'
+}
+
+boolean skipStageType(List failedStageTypesList, String stageType) {
+  !failedStageTypesList.contains(stageType)
 }
