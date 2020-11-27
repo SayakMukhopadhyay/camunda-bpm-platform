@@ -766,7 +766,7 @@ String getMavenProfileDir(String profile) {
 }
 
 void addFailedStageType(List failedStageTypesList, String stageType) {
-  if (!failedStageTypesList.contains(stageType)) failedStageTypesList << 'firstStage'
+  if (!failedStageTypesList.contains(stageType)) failedStageTypesList << stageType
 }
 
 boolean skipStageType(List failedStageTypesList, String stageType) {
